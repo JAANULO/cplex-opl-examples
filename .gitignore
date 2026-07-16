@@ -1,0 +1,12 @@
+# CPLEX log files
+*.log
+cplex.log
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+/scratch
