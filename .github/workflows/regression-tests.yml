@@ -41,7 +41,9 @@ jobs:
         run: echo "pluginVersion=${{ inputs.pluginVersion }}" >> gradle.properties
 
       - name: Run regression tests
-        run: ./gradlew :test-harness:test --stacktrace
+        run: |
+          chmod +x gradlew
+          ./gradlew :test-harness:test --stacktrace
 
       - name: Upload JSON report
         if: always()
