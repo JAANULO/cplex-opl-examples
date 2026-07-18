@@ -1,0 +1,60 @@
+name: Plugin regression tests
+
+on:
+  # Automatyczny trigger z repo cplex-opl-jetbrains po każdym release (FAZA 4 w PLAN.md)
+  repository_dispatch:
+    types: [plugin_released]
+
+  # Ręczne odpalenie z zakładki Actions - użyj tego do pierwszych testów
+  workflow_dispatch:
+    inputs:
+      pluginVersion:
+        description: "Tag release'u pluginu do przetestowania (opcjonalnie, nadpisuje gradle.properties)"
+        required: false
+        type: string
+
+jobs:
+  regression-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Override plugin version (jeśli podano w workflow_dispatch)
+        if: ${{ inputs.pluginVersion != '' }}
+        run: echo "pluginVersion=${{ inputs.pluginVersion }}" >> gradle.properties
+
+      - name: Run regression tests
+        run: ./gradlew :test-harness:test --stacktrace
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-regression-report
+          path: test-harness/build/test-results/plugin-report.json
+          retention-days: 30
+
+      - name: Upload full test logs (na wypadek fail)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-test-logs
+          path: test-harness/build/reports/tests/
+          retention-days: 14

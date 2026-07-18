@@ -10,3 +10,9 @@ cplex.log
 .vscode/
 
 /scratch
+
+# Gradle & Build
+.gradle/
+build/
+test-harness/build/
+.intellijPlatform/
