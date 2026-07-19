@@ -36,9 +36,20 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: Override plugin version (jeśli podano w workflow_dispatch)
-        if: ${{ inputs.pluginVersion != '' }}
-        run: echo "pluginVersion=${{ inputs.pluginVersion }}" >> gradle.properties
+      - name: Override variables dynamically (z triggera webhook / wpisane ręcznie)
+        run: |
+          # 1. Wersja wtyczki (pluginVersion)
+          VERSION="${{ inputs.pluginVersion || github.event.client_payload.version }}"
+          if [ -n "$VERSION" ]; then
+            VERSION=${VERSION#v}
+            echo "pluginVersion=${VERSION}" >> gradle.properties
+          fi
+          
+          # 2. Wersja IntelliJ (platformVersion)
+          PLATFORM="${{ github.event.client_payload.platform_version }}"
+          if [ -n "$PLATFORM" ]; then
+            echo "platformVersion=${PLATFORM}" >> gradle.properties
+          fi
 
       - name: Run regression tests
         run: |
