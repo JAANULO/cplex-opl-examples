@@ -37,24 +37,31 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: Override variables dynamically (z triggera webhook / wpisane ręcznie)
+        env:
+          INPUT_VERSION: ${{ inputs.pluginVersion }}
+          PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
+          PAYLOAD_PLATFORM: ${{ github.event.client_payload.platform_version }}
         run: |
           # 1. Wersja wtyczki (pluginVersion)
-          VERSION="${{ inputs.pluginVersion || github.event.client_payload.version }}"
+          VERSION="${INPUT_VERSION:-$PAYLOAD_VERSION}"
           if [ -n "$VERSION" ]; then
             VERSION=${VERSION#v}
             echo "pluginVersion=${VERSION}" >> gradle.properties
           fi
           
           # 2. Wersja IntelliJ (platformVersion)
-          PLATFORM="${{ github.event.client_payload.platform_version }}"
+          PLATFORM="$PAYLOAD_PLATFORM"
           if [ -n "$PLATFORM" ]; then
             echo "platformVersion=${PLATFORM}" >> gradle.properties
           fi
 
-      - name: Run regression tests
+      - name: Download Plugin
         run: |
           chmod +x gradlew
-          ./gradlew :test-harness:test --stacktrace
+          ./gradlew :test-harness:fetchPlugin --stacktrace
+
+      - name: Run regression tests
+        run: ./gradlew :test-harness:test --stacktrace
 
       - name: Upload JSON report
         if: always()
@@ -71,3 +78,9 @@ jobs:
           name: gradle-test-logs
           path: test-harness/build/reports/tests/
           retention-days: 14
+
+      - name: Generate summary report
+        if: always()
+        run: |
+          chmod +x scripts/generate_github_summary.sh
+          ./scripts/generate_github_summary.sh

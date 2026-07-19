@@ -16,3 +16,6 @@ cplex.log
 build/
 test-harness/build/
 .intellijPlatform/
+
+# Local fallback reports
+local_summary.md
