@@ -2,7 +2,7 @@ rootProject.name = "cplex-opl-examples-tests"
 
 include(":test-harness")
 
-// Zbiór repozytoriów pluginów Gradle - dotyczy wszystkich modułów
+// Set of Gradle plugin repositories - applies to all modules
 pluginManagement {
     repositories {
         gradlePluginPortal()

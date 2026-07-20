@@ -1,19 +1,18 @@
 #!/bin/bash
 
-# Skrypt wywoływany przez GitHub Actions w kroku "if: always()"
-# Służy do generowania ładnej tabelki Markdown na podstawie pliku plugin-report.json
+# Script called by GitHub Actions in the "if: always()" step
+# Used to generate a nice Markdown table based on the plugin-report.json file
 
 REPORT_FILE="test-harness/build/test-results/plugin-report.json"
 SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-local_summary.md}"
 
 if [ -f "$REPORT_FILE" ]; then
-  echo "### 📊 Raport Analizy Modeli OPL" >> "$SUMMARY_FILE"
-  echo "| Plik | Błędy | Ostrzeżenia |" >> "$SUMMARY_FILE"
-  echo "|---|---|---|" >> "$SUMMARY_FILE"
-  
-  # jq parsuje plik JSON i wyciąga wyniki per plik formatując je bezpośrednio do wierszy tabeli Markdown
-  jq -r '.results[] | "| \(.relativePath) | \(.errorCount) | \(.warningCount) |"' "$REPORT_FILE" >> "$SUMMARY_FILE"
+echo "### 📊 OPL Models Analysis Report" >> "$SUMMARY_FILE"
+echo "| File | Errors | Warnings |" >> "$SUMMARY_FILE"
+echo "|---|---|---|" >> "$SUMMARY_FILE"
+# jq parses the JSON file and extracts per-file results, formatting them directly into Markdown table rows
+jq -r '.results[] | "| (.relativePath) | (.errorCount) | (.warningCount) |"' "$REPORT_FILE" >> "$SUMMARY_FILE"
 else
-  echo "### ❌ Testy nie wygenerowały raportu." >> "$SUMMARY_FILE"
-  echo "Zadanie wywaliło się przed rozpoczęciem testów (np. błąd 404 przy pobieraniu wtyczki z GitHuba, szkic Draft zamiast Release, zły tag lub błąd krytyczny JVM)." >> "$SUMMARY_FILE"
+echo "### ❌ Tests did not generate a report." >> "$SUMMARY_FILE"
+echo "The job crashed before the tests started (e.g., 404 error when downloading the plugin from GitHub, Draft instead of Release, wrong tag, or a JVM fatal error)." >> "$SUMMARY_FILE"
 fi
