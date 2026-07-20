@@ -6,9 +6,9 @@ import com.google.gson.GsonBuilder
 import java.io.File
 
 /**
- * Wynik testu dla jednego pliku .mod/.dat.
- * Zmień pola tutaj jeśli chcesz inny kształt JSON-a.
- */
+* Test result for a single .mod/.dat file.
+* Change the fields here if you want a different JSON structure.
+*/
 data class FileTestResult(
     val fileName: String,
     val relativePath: String,
@@ -25,17 +25,17 @@ data class RegressionReport(
 )
 
 /**
- * Testowa "sprawdzaczka" pluginu: dla każdego pliku .mod w models/
- * odpala highlighting silnika pluginu (headless, bez otwierania okna IDE)
- * i zbiera liczbę błędów/warningów do jednego raportu JSON.
- *
- * WAŻNE - to na razie tylko szkielet:
- *  - assercja na końcu jest bardzo prosta (pliki z "broken" w nazwie
- *    powinny mieć >0 błędów). Dostosuj to do realnej konwencji nazw
- *    Twoich przykładów w models/.
- *  - jeśli chcesz porównywać z dokładną, oczekiwaną liczbą błędów per plik,
- *    dodaj pliki *.expected.json obok modeli i wczytaj je tutaj do porównania.
- */
+* Plugin test harness: for each .mod file in models/
+* runs the plugin engine highlighting (headless, without opening an IDE window)
+* and collects the number of errors/warnings into a single JSON report.
+* IMPORTANT - this is just a skeleton for now:
+* * the assertion at the end is very simple (files with "broken" in the name
+* should have >0 errors). Adjust this to the actual naming convention
+* of your examples in models/.
+* * if you want to compare against an exact, expected number of errors per file,
+
+* add *.expected.json files next to the models and load them here for comparison.
+*/
 class PluginRegressionTest : BasePlatformTestCase() {
 
     private val modelsDir: File
@@ -96,14 +96,15 @@ class PluginRegressionTest : BasePlatformTestCase() {
     }
 
     private fun assertNoUnexpectedErrors(results: List<FileTestResult>) {
-        // Konwencja: pliki z "broken" w nazwie MAJĄ mieć błędy (to są
-        // celowo zepsute przykłady testujące wykrywanie błędów).
-        // Wszystkie inne pliki NIE powinny mieć błędów.
+        // Convention: files with "broken" in the name MUST have errors (these are
+        // intentionally broken examples testing error detection).
+        // All other files should NOT have errors.
+
         val shouldBeClean = results.filterNot { it.fileName.contains("broken", ignoreCase = true) }
         val unexpectedlyBroken = shouldBeClean.filter { it.errorCount > 0 }
 
         assertTrue(
-            "Pliki, które powinny być poprawne, mają błędy: " +
+            "Files that should be clean have errors: " +
                 unexpectedlyBroken.joinToString { "${it.fileName} (${it.errorCount} błędów)" },
             unexpectedlyBroken.isEmpty()
         )

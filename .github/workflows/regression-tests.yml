@@ -1,11 +1,11 @@
 name: Plugin regression tests
 
 on:
-  # Automatyczny trigger z repo cplex-opl-jetbrains po każdym release (FAZA 4 w PLAN.md)
+  # Automatic trigger from the cplex-opl-jetbrains repo after each release (PHASE 4 in PLAN.md)
   repository_dispatch:
     types: [plugin_released]
 
-  # Ręczne odpalenie z zakładki Actions - użyj tego do pierwszych testów
+  # Manual trigger from the Actions tab - use this for initial tests
   workflow_dispatch:
     inputs:
       pluginVersion:
