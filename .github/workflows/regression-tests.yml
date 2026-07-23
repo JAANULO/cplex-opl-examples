@@ -64,7 +64,15 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - name: Build plugin from sources
+        if: github.event.action == 'run_dev_regression'
+        working-directory: cplex-opl-jetbrains
+        run: |
+          chmod +x gradlew
+          ./gradlew buildPlugin
+
       - name: Override variables dynamically (z triggera webhook / wpisane ręcznie)
+
         env:
           INPUT_VERSION: ${{ inputs.pluginVersion }}
           PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
