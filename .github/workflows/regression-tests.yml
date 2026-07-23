@@ -3,7 +3,7 @@ name: Plugin regression tests
 on:
   # Automatic trigger from the cplex-opl-jetbrains repo after each release (PHASE 4 in PLAN.md)
   repository_dispatch:
-    types: [plugin_released]
+    types: [plugin_released, run_dev_regression]
 
   # Manual trigger from the Actions tab - use this for initial tests
   workflow_dispatch:
@@ -16,9 +16,37 @@ on:
 jobs:
   regression-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cplex-opl-examples
     steps:
-      - name: Checkout
+      - name: Checkout examples
         uses: actions/checkout@v4
+        with:
+          path: cplex-opl-examples
+          fetch-depth: 0
+
+      - name: Switch to matching branch in examples (if exists)
+        if: github.event.action == 'run_dev_regression' && github.event.client_payload.ref != ''
+        working-directory: cplex-opl-examples
+        run: |
+          REF_NAME="${{ github.event.client_payload.ref }}"
+          BRANCH_NAME="${REF_NAME#refs/heads/}"
+          echo "Szukanie gałęzi o nazwie: $BRANCH_NAME"
+          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
+            echo "Znaleziono gałąź $BRANCH_NAME, przełączam..."
+            git checkout "$BRANCH_NAME"
+          else
+            echo "Nie znaleziono gałęzi $BRANCH_NAME w tym repozytorium. Pozostaję na domyślnej."
+          fi
+
+      - name: Checkout plugin (only for dev regression)
+        if: github.event.action == 'run_dev_regression'
+        uses: actions/checkout@v4
+        with:
+          repository: JAANULO/cplex-opl-jetbrains
+          ref: ${{ github.event.client_payload.sha }}
+          path: cplex-opl-jetbrains
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -42,33 +70,47 @@ jobs:
           PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
           PAYLOAD_PLATFORM: ${{ github.event.client_payload.platform_version }}
         run: |
-          # 1. Wersja wtyczki (pluginVersion)
+          # 1. Wersja wtyczki (pluginVersion) dla zwykłego release'u lub wywołania ręcznego
           VERSION="${INPUT_VERSION:-$PAYLOAD_VERSION}"
           if [ -n "$VERSION" ]; then
             VERSION=${VERSION#v}
+            sed -i '/^pluginVersion=/d' gradle.properties
             echo "pluginVersion=${VERSION}" >> gradle.properties
           fi
           
-          # 2. Wersja IntelliJ (platformVersion)
+          # 2. Synchronizacja z lokalną wtyczką dla dev regression
+          if [ "${{ github.event.action }}" = "run_dev_regression" ]; then
+            PLUGIN_VER=$(grep -E '^version\s*=' ../cplex-opl-jetbrains/gradle.properties | cut -d'=' -f2 | tr -d ' ' | tr -d '\r')
+            if [ -n "$PLUGIN_VER" ]; then
+              sed -i '/^pluginVersion=/d' gradle.properties
+              echo "pluginVersion=${PLUGIN_VER}" >> gradle.properties
+            fi
+          fi
+          
+          # 3. Wersja IntelliJ (platformVersion)
           PLATFORM="$PAYLOAD_PLATFORM"
           if [ -n "$PLATFORM" ]; then
+            sed -i '/^platformVersion=/d' gradle.properties
             echo "platformVersion=${PLATFORM}" >> gradle.properties
           fi
 
       - name: Download Plugin
+        if: github.event.action != 'run_dev_regression'
         run: |
           chmod +x gradlew
           ./gradlew :test-harness:fetchPlugin --stacktrace
 
       - name: Run regression tests
-        run: ./gradlew :test-harness:test --stacktrace
+        run: |
+          chmod +x gradlew
+          ./gradlew :test-harness:test --stacktrace
 
       - name: Upload JSON report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: plugin-regression-report
-          path: test-harness/build/test-results/plugin-report.json
+          path: cplex-opl-examples/test-harness/build/test-results/plugin-report.json
           retention-days: 30
 
       - name: Upload full test logs (na wypadek fail)
@@ -76,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gradle-test-logs
-          path: test-harness/build/reports/tests/
+          path: cplex-opl-examples/test-harness/build/reports/tests/
           retention-days: 14
 
       - name: Generate summary report
@@ -84,3 +126,4 @@ jobs:
         run: |
           chmod +x scripts/generate_github_summary.sh
           ./scripts/generate_github_summary.sh
+

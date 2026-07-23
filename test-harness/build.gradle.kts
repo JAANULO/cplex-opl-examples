@@ -40,7 +40,7 @@ val fetchPlugin by tasks.registering(Exec::class) {
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
-        localPlugin(layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile)
+        localPlugin(file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-${providers.gradleProperty("pluginVersion").get()}.zip"))
         testFramework(TestFrameworkType.Platform)
     }
 
