@@ -131,7 +131,5 @@ jobs:
 
       - name: Generate summary report
         if: always()
-        run: |
-          chmod +x scripts/generate_github_summary.sh
-          ./scripts/generate_github_summary.sh
+        run: python scripts/generate_github_summary.py
 
