@@ -1,0 +1,5 @@
+nbItems = 7;
+nbBins = 5;
+binCapacity = 15;
+
+weight = [4, 8, 3, 5, 2, 7, 6];

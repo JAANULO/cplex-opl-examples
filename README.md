@@ -20,6 +20,8 @@ To run these models, you need a local installation of **IBM ILOG CPLEX Studio**.
 oplrun model.mod data.dat
 ```
 
+> **Note:** Models starting with the declaration `using CP;` (such as Job-Shop Scheduling) use the **CP Optimizer** constraint programming engine instead of the standard CPLEX MIP/LP solver. The `oplrun` command handles this switch automatically.
+
 ## Models Status
 
 | Model Name | Type | Difficulty | Directory |
@@ -29,3 +31,8 @@ oplrun model.mod data.dat
 | Transportation Problem | IP | Easy | `models/03-transportation` |
 | Diet Problem | LP | Easy | `models/04-diet` |
 | Blending Problem | LP | Medium | `models/05-blending` |
+| Bin Packing Problem | MIP | Medium/Hard | `models/06-bin-packing` |
+| Set Covering Problem | BIP | Medium | `models/07-set-covering` |
+| Traveling Salesperson (TSP) | MIP | Hard | `models/08-tsp` |
+| Job-Shop Scheduling Problem | CP | Hard | `models/09-job-shop` |
+| Vehicle Routing Problem (CVRP) | MIP | Hard | `models/10-vrp` |

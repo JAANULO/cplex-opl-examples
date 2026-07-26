@@ -1,0 +1,16 @@
+nbJobs = 3;
+nbMachines = 3;
+
+// Machine assignment for each task of each job (1-indexed machines)
+Machine = [
+    [1, 2, 3],
+    [2, 3, 1],
+    [3, 1, 2]
+];
+
+// Duration of each task (in time units)
+Duration = [
+    [3, 5, 2],
+    [4, 2, 6],
+    [5, 4, 3]
+];
