@@ -43,17 +43,17 @@ class PluginRegressionTest : BasePlatformTestCase() {
 
     override fun getTestDataPath(): String = modelsDir.absolutePath
 
-    fun `test all mod files produce expected diagnostics`() {
-        val modFiles = modelsDir.walkTopDown()
-            .filter { it.isFile && it.extension == "mod" }
+    fun `test all mod and dat files produce expected diagnostics`() {
+        val testFiles = modelsDir.walkTopDown()
+            .filter { it.isFile && (it.extension == "mod" || it.extension == "dat") }
             .toList()
 
-        check(modFiles.isNotEmpty()) {
-            "Nie znaleziono żadnych plików .mod w ${modelsDir.absolutePath} - " +
+        check(testFiles.isNotEmpty()) {
+            "Nie znaleziono żadnych plików .mod ani .dat w ${modelsDir.absolutePath} - " +
                 "sprawdź systemProperty(testData.dir) w build.gradle.kts"
         }
 
-        val results = modFiles.map { file -> analyzeFile(file) }
+        val results = testFiles.map { file -> analyzeFile(file) }
 
         val report = RegressionReport(
             pluginVersion = System.getProperty("plugin.version.under.test") ?: "unknown",

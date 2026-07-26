@@ -22,8 +22,10 @@ oplrun model.mod data.dat
 
 ## Models Status
 
-| Model Name | Type | Difficulty | 
+| Model Name | Type | Difficulty | Directory |
 |---|---|---|---|
-| Knapsack Problem | MIP | Easy |
-| Assignment Problem | BIP | Easy |
-| Traveling Salesperson (TSP) | MIP | Medium |
+| 0-1 Knapsack Problem | MIP | Easy | `models/01-knapsack` |
+| Assignment Problem | BIP | Easy | `models/02-assignment` |
+| Transportation Problem | IP | Easy | `models/03-transportation` |
+| Diet Problem | LP | Easy | `models/04-diet` |
+| Blending Problem | LP | Medium | `models/05-blending` |
