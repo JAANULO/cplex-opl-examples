@@ -1,9 +1,18 @@
 package com.github.cplexopl.tests
 
-import com.intellij.lang.annotation.HighlightSeverity
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.google.gson.GsonBuilder
+import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
+import org.junit.After
+import org.junit.AfterClass
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.io.File
+import kotlin.time.measureTimedValue
 
 /**
 * Test result for a single .mod/.dat file.
@@ -14,7 +23,8 @@ data class FileTestResult(
     val relativePath: String,
     val errorCount: Int,
     val warningCount: Int,
-    val errorMessages: List<String>
+    val errorMessages: List<String>,
+    val highlightingTimeMs: Long
 )
 
 data class RegressionReport(
@@ -36,77 +46,102 @@ data class RegressionReport(
 
 * add *.expected.json files next to the models and load them here for comparison.
 */
-class PluginRegressionTest : BasePlatformTestCase() {
+@RunWith(Parameterized::class)
+class PluginRegressionTest(private val testFile: File) {
 
-    private val modelsDir: File
-        get() = File(System.getProperty("testData.dir") ?: "models")
+    private lateinit var myFixture: CodeInsightTestFixture
 
-    override fun getTestDataPath(): String = modelsDir.absolutePath
-
-    fun `test all mod and dat files produce expected diagnostics`() {
-        val testFiles = modelsDir.walkTopDown()
-            .filter { it.isFile && (it.extension == "mod" || it.extension == "dat") }
-            .toList()
-
-        check(testFiles.isNotEmpty()) {
-            "Nie znaleziono żadnych plików .mod ani .dat w ${modelsDir.absolutePath} - " +
-                "sprawdź systemProperty(testData.dir) w build.gradle.kts"
-        }
-
-        val results = testFiles.map { file -> analyzeFile(file) }
-
-        val report = RegressionReport(
-            pluginVersion = System.getProperty("plugin.version.under.test") ?: "unknown",
-            totalFiles = results.size,
-            totalErrors = results.sumOf { it.errorCount },
-            results = results
-        )
-
-        writeReport(report)
-        assertNoUnexpectedErrors(results)
+    @Before
+    fun setUp() {
+        val factory = IdeaTestFixtureFactory.getFixtureFactory()
+        val fixtureBuilder = factory.createLightFixtureBuilder(null, "PluginRegressionTest")
+        myFixture = factory.createCodeInsightFixture(fixtureBuilder.fixture)
+        myFixture.testDataPath = modelsDir.absolutePath
+        myFixture.setUp()
     }
 
-    private fun analyzeFile(file: File): FileTestResult {
-        val relativePath = file.relativeTo(modelsDir).path
+    @After
+    fun tearDown() {
+        myFixture.tearDown()
+    }
+
+    @Test
+    fun checkDiagnostics() {
+        val relativePath = testFile.relativeTo(modelsDir).path
         myFixture.configureByFile(relativePath)
 
-        val highlights = myFixture.doHighlighting()
+        val (highlights, duration) = measureTimedValue {
+            myFixture.doHighlighting()
+        }
+        val timeMs = duration.inWholeMilliseconds
+
         val errors = highlights.filter { it.severity == HighlightSeverity.ERROR }
         val warnings = highlights.filter { it.severity == HighlightSeverity.WARNING }
 
-        return FileTestResult(
-            fileName = file.name,
+        val result = FileTestResult(
+            fileName = testFile.name,
             relativePath = relativePath,
             errorCount = errors.size,
             warningCount = warnings.size,
-            errorMessages = errors.mapNotNull { it.description }
+            errorMessages = errors.mapNotNull { it.description },
+            highlightingTimeMs = timeMs
         )
+
+        synchronized(resultsLock) {
+            allResults.add(result)
+        }
+
+        if (!testFile.name.contains("broken", ignoreCase = true)) {
+            assertTrue(
+                "Files that should be clean have errors: ${testFile.name} (${result.errorCount} błędów)",
+                errors.isEmpty()
+            )
+        }
     }
 
-    private fun writeReport(report: RegressionReport) {
-        val outputPath = System.getProperty("report.output")
-            ?: "build/test-results/plugin-report.json"
-        val outputFile = File(outputPath)
-        outputFile.parentFile?.mkdirs()
+    companion object {
+        private val modelsDir: File
+            get() = File(System.getProperty("testData.dir") ?: "models")
 
-        val gson = GsonBuilder().setPrettyPrinting().create()
-        outputFile.writeText(gson.toJson(report))
+        private val allResults = mutableListOf<FileTestResult>()
+        private val resultsLock = Any()
 
-        println("Raport zapisany do: ${outputFile.absolutePath}")
-    }
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun data(): Collection<File> {
+            val dir = modelsDir
+            if (!dir.exists()) return emptyList()
 
-    private fun assertNoUnexpectedErrors(results: List<FileTestResult>) {
-        // Convention: files with "broken" in the name MUST have errors (these are
-        // intentionally broken examples testing error detection).
-        // All other files should NOT have errors.
+            return dir.walkTopDown()
+                .filter { it.isFile && (it.extension == "mod" || it.extension == "dat") }
+                .toList()
+        }
 
-        val shouldBeClean = results.filterNot { it.fileName.contains("broken", ignoreCase = true) }
-        val unexpectedlyBroken = shouldBeClean.filter { it.errorCount > 0 }
+        @JvmStatic
+        @AfterClass
+        fun tearDownClass() {
+            if (allResults.isEmpty()) return
 
-        assertTrue(
-            "Files that should be clean have errors: " +
-                unexpectedlyBroken.joinToString { "${it.fileName} (${it.errorCount} błędów)" },
-            unexpectedlyBroken.isEmpty()
-        )
+            val report = RegressionReport(
+                pluginVersion = System.getProperty("plugin.version.under.test") ?: "unknown",
+                totalFiles = allResults.size,
+                totalErrors = allResults.sumOf { it.errorCount },
+                results = allResults
+            )
+
+            writeReport(report)
+        }
+
+        private fun writeReport(report: RegressionReport) {
+            val outputPath = System.getProperty("report.output")
+                ?: "build/test-results/plugin-report.json"
+            val outputFile = File(outputPath)
+            outputFile.parentFile?.mkdirs()
+
+            val gson = GsonBuilder().setPrettyPrinting().create()
+            outputFile.writeText(gson.toJson(report))
+
+            println("Raport zapisany do: ${outputFile.absolutePath}")
+        }
     }
 }
