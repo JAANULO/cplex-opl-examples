@@ -2,8 +2,11 @@ import json
 import os
 import sys
 
-report_file = "test-harness/build/test-results/plugin-report.json"
 summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "local_summary.md")
+report_file = "test-harness/build/test-results/plugin-report.json"
+completion_file = "test-harness/build/test-results/completion-report.json"
+
+generated_any = False
 
 if os.path.exists(report_file):
     try:
@@ -24,15 +27,46 @@ if os.path.exists(report_file):
         with open(summary_file, "a", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
         print("Summary report generated successfully.")
+        generated_any = True
     except Exception as e:
         print(f"Error generating summary: {e}", file=sys.stderr)
         sys.exit(1)
-else:
+
+if os.path.exists(completion_file):
+    try:
+        with open(completion_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+        lines = []
+        lines.append("\n### ⚡ Code Completion Tests")
+        lines.append(f"**Total files:** {data.get('totalFiles', 0)} | **Passed:** {data.get('passedCount', 0)} | **Failed:** {data.get('failedCount', 0)}\n")
+        lines.append("| File | Status | Message |")
+        lines.append("|---|---|---|")
+        
+        for result in data.get("results", []):
+            rel_path = result.get("relativePath", "")
+            passed = result.get("passed", False)
+            status = "✅ Passed" if passed else "❌ Failed"
+            msg = result.get("message", "")
+            if msg is None:
+                msg = ""
+            msg = msg.replace('\n', ' ').strip()
+            lines.append(f"| {rel_path} | {status} | {msg} |")
+            
+        with open(summary_file, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        print("Completion summary report appended successfully.")
+        generated_any = True
+    except Exception as e:
+        print(f"Error generating completion summary: {e}", file=sys.stderr)
+
+if not generated_any:
     try:
         with open(summary_file, "a", encoding="utf-8") as f:
-            f.write("### ❌ Tests did not generate a report.\n")
-            f.write("The job crashed before the tests started (e.g., 404 error when downloading the plugin from GitHub, Draft instead of Release, wrong tag, or a JVM fatal error).\n")
-        print("Report file not found. Summary generated with error.")
+            f.write("### ❌ Tests did not generate any report.\n")
+            f.write("The job crashed before the tests started (e.g., compile error, test initialization failure).\n")
+        print("No report files found. Summary generated with error.")
     except Exception as e:
         print(f"Error writing fallback summary: {e}", file=sys.stderr)
         sys.exit(1)
+
