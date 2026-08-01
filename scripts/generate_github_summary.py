@@ -3,6 +3,11 @@ import os
 import sys
 
 summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "local_summary.md")
+try:
+    with open(summary_file, "w", encoding="utf-8") as f:
+        pass
+except Exception as e:
+    print(f"Warning: Could not clear existing summary file: {e}", file=sys.stderr)
 report_file = "test-harness/build/test-results/plugin-report.json"
 completion_file = "test-harness/build/test-results/completion-report.json"
 
