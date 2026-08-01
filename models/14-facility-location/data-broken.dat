@@ -1,0 +1,13 @@
+nbWarehouses = 3;
+nbStores = 4;
+
+capacity = [100, 150, 80];
+fixedCost = [500, 700, 400];
+demand = [40, 50, 30, 40];
+
+transitionCost = [
+  [12, 15, 20],
+  [18, 10, 15],
+  [22, 17, 10],
+  [15, 12, 18]
+];
