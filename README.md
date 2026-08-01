@@ -36,3 +36,6 @@ oplrun model.mod data.dat
 | Traveling Salesperson (TSP) | MIP | Hard | `models/08-tsp` |
 | Job-Shop Scheduling Problem | CP | Hard | `models/09-job-shop` |
 | Vehicle Routing Problem (CVRP) | MIP | Hard | `models/10-vrp` |
+| Facility Location Problem | MIP | Medium | `models/14-facility-location` |
+| Execute & Main Block Test | Scripting | Medium | `models/15-execute-block` |
+| Advanced Tuples Test | MIP | Medium | `models/16-tuples` |
