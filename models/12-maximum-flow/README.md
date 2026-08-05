@@ -1,6 +1,6 @@
 # Maximum Flow Problem
 
-Problem polegający na znalezieniu maksymalnego przepływu w sieci od źródła do ujścia.
-Model opiera się na warunkach zachowania przepływu w węzłach pośrednich (suma wpływów 
-równa się sumie wypływów) oraz nieprzekraczaniu maksymalnych przepustowości krawędzi (capacity).
-Celem jest maksymalizacja przepływu całkowitego opuszczającego źródło.
+The problem of finding the maximum flow in a network from a source to a sink.
+The model is based on flow conservation conditions at intermediate nodes (sum of inflows 
+equals sum of outflows) and not exceeding the maximum edge capacities.
+The goal is to maximize the total flow leaving the source.

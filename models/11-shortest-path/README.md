@@ -1,6 +1,6 @@
 # Shortest Path Problem
 
-Problem polegający na znalezieniu najkrótszej drogi między węzłem startowym a końcowym w grafie skierowanym.
-Minimalizowana jest suma kosztów krawędzi wchodzących w skład wybranej ścieżki. Model wykorzystuje
-warunki zachowania przepływu (flow conservation) ustawiając bilans na 1 dla źródła, -1 dla celu
-oraz 0 dla pozostałych węzłów.
+The problem of finding the shortest path between a starting node and an ending node in a directed graph.
+The sum of the costs of the edges included in the selected path is minimized. The model uses
+flow conservation conditions by setting the balance to 1 for the source, -1 for the sink
+and 0 for the remaining nodes.

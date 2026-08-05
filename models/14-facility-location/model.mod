@@ -10,7 +10,7 @@ float fixedCost[Warehouses] = ...;
 float demand[Stores] = ...;
 float transitionCost[Stores][Warehouses] = ...;
 
-// Zmienne binarne i ciągłe razem
+// Binary and continuous variables together
 dvar boolean open[Warehouses];
 dvar float+ ship[Stores][Warehouses];
 
@@ -19,17 +19,17 @@ minimize
   sum(s in Stores, w in Warehouses) transitionCost[s][w] * ship[s][w];
 
 subject to {
-  // Zaspokojenie popytu
+  // Satisfy demand
   forall(s in Stores)
     DemandConstraint:
       sum(w in Warehouses) ship[s][w] == demand[s];
 
-  // Pojemność magazynu
+  // Warehouse capacity
   forall(w in Warehouses)
     CapacityConstraint:
       sum(s in Stores) ship[s][w] <= capacity[w] * open[w];
 
-  // Ograniczenie logiczne (=>)
+  // Logical constraint (=>)
   forall(s in Stores, w in Warehouses)
     LogicConstraint:
       (ship[s][w] > 0) => (open[w] == 1);

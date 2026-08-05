@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<settings version="2">
+  <category name="cplex">
+    <setting name="qpmethod" value="2"/>
+    <setting name="optimalitytarget" value="3"/>
+  </category>
+</settings>

@@ -1,4 +1,4 @@
-// Model z zaawansowanymi krotkami (tuples)
+// Model with advanced tuples
 tuple Address {
   string street;
   int number;
@@ -8,7 +8,7 @@ tuple Address {
 tuple Warehouse {
   key string id;
   string name;
-  Address location; // Zagnieżdżona krotka
+  Address location; // Nested tuple
   int capacity;
 }
 
@@ -21,7 +21,7 @@ tuple Connection {
 {Warehouse} warehouses = ...;
 {Connection} connections = ...;
 
-// Tablica krotek
+// Array of tuples
 float connectionCost[connections] = ...;
 
 dvar float+ ship[connections];

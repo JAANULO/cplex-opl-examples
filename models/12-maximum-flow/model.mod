@@ -15,22 +15,22 @@ string Sink = ...;
 
 dvar float+ flow[Edges];
 
-// Celowo użyty dexpr do zdefiniowania całkowitego przepływu
+// Purposefully used dexpr to define total flow
 dexpr float TotalFlow = sum(e in Edges: e.u == Source) flow[e];
 
 maximize TotalFlow;
 
 subject to {
-    // Zachowanie przepływu (flow conservation)
+    // Flow conservation
     ctFlowConservation:
         forall(i in Nodes: i != Source && i != Sink)
             sum(e in Edges: e.v == i) flow[e] == sum(e in Edges: e.u == i) flow[e];
             
-    // Ograniczenia przepustowości (anonimowe)
+    // Capacity constraints (anonymous)
     forall(e in Edges)
         flow[e] <= Capacity[e];
         
-    // Wszystko, co wypływa ze źródła, wpływa do ujścia
+    // Everything that flows out of the source flows into the sink
     sum(e in Edges: e.u == Source) flow[e] == sum(e in Edges: e.v == Sink) flow[e];
 }
 

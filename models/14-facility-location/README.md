@@ -1,6 +1,6 @@
 # 14-facility-location
 
-Ten model implementuje klasyczny problem lokalizacji zakładów (Facility Location Problem). 
-Służy on do testowania poprawności parsowania następujących elementów w pluginie CPLEX OPL:
-- Współistnienia zmiennych binarnych (`dvar boolean`) i zmiennych ciągłych (`dvar float+`).
-- Ograniczeń logicznych z operatorem implikacji (`=>`).
+This model implements the classic Facility Location Problem. 
+It is used to test the parsing correctness of the following elements in the CPLEX OPL plugin:
+- Coexistence of binary variables (`dvar boolean`) and continuous variables (`dvar float+`).
+- Logical constraints with the implication operator (`=>`).

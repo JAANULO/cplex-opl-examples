@@ -10,17 +10,17 @@ tuple Edge {
 {Edge} Edges = ...;
 float Cost[Edges] = ...;
 
-// Zmienna decyzyjna: 1 jeśli krawędź jest w MST, 0 w przeciwnym razie
+// Decision variable: 1 if edge is in MST, 0 otherwise
 dvar boolean x[Edges];
 
 minimize sum(e in Edges) Cost[e] * x[e];
 
 subject to {
-    // MST musi zawierać dokładnie |V| - 1 krawędzi (anonimowe)
+    // MST must contain exactly |V| - 1 edges (anonymous)
     sum(e in Edges) x[e] == card(Nodes) - 1;
     
-    // Eliminacja podcykli dla każdego podzbioru S o rozmiarze >= 2
-    // Użyto powerset do wygenerowania wszystkich podzbiorów
+    // Subtour elimination for each subset S of size >= 2
+    // Used powerset to generate all subsets
     ctSubtourElimination:
         forall(S in powerset(Nodes): card(S) >= 2)
             sum(e in Edges: e.u in S && e.v in S) x[e] <= card(S) - 1;

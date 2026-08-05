@@ -1,0 +1,8 @@
+numNurses = 3;
+numDays = 2;
+numShifts = 2;
+
+demand = [
+    [1, 2],
+    [2, 1]
+];

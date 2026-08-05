@@ -1,4 +1,4 @@
-// Model z execute block (ILOG Script)
+// Model with execute block (ILOG Script)
 int limit = ...;
 dvar int+ x;
 
@@ -10,31 +10,31 @@ subject to {
 
 // Pre-processing
 execute INITIALIZE {
-  writeln("Uruchamianie pre-processingu...");
+  writeln("Running pre-processing...");
   if (limit < 0) {
      limit = 0;
   }
-  writeln("Limit wynosi: ", limit);
+  writeln("Limit is: ", limit);
 }
 
 // Post-processing
 execute DISPLAY {
-  writeln("Uruchamianie post-processingu...");
-  writeln("Status rozwiazania: ", cplex.status);
+  writeln("Running post-processing...");
+  writeln("Solution status: ", cplex.status);
   if (cplex.status == 1) {
-    writeln("Znaleziono optymalne rozwiazanie: x = ", x.solutionValue);
+    writeln("Optimal solution found: x = ", x.solutionValue);
   } else {
-    writeln("Brak optymalnego rozwiazania.");
+    writeln("No optimal solution.");
   }
   
   var sumTemp = 0;
   for (var i = 1; i <= 5; i++) {
     sumTemp += i;
   }
-  writeln("Suma testowa 1..5: ", sumTemp);
+  writeln("Test sum 1..5: ", sumTemp);
 }
 
-// Flow control (blok main)
+// Flow control (main block)
 main {
   var source = new OplModelSource("model.mod");
   var def = new OplModelDefinition(source);
@@ -46,10 +46,10 @@ main {
   modelInstance.generate();
   
   if (cplexInstance.solve()) {
-    writeln("Rozwiazanie w main: obj = ", cplexInstance.getObjValue());
+    writeln("Solution in main: obj = ", cplexInstance.getObjValue());
     modelInstance.postProcess();
   } else {
-    writeln("Brak rozwiazania w main.");
+    writeln("No solution in main.");
   }
   
   modelInstance.end();
