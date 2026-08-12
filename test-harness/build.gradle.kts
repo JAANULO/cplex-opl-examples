@@ -1,3 +1,5 @@
+import java.lang.management.ManagementFactory
+import java.net.URI
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
@@ -16,25 +18,30 @@ repositories {
 }
 
 // Downloads the built plugin from the latest GitHub Release of the cplex-opl-jetbrains repo.
-// Runs once - if the file already exists in build/, it won't download again.
-val fetchPlugin by tasks.registering(Exec::class) {
-    val pluginVersion = providers.gradleProperty("pluginVersion").get()
-    val outputFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip")
+val fetchPlugin by tasks.registering {
+    val pluginVer = providers.gradleProperty("pluginVersion").get()
+    val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
+    val outputFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
 
     outputs.file(outputFile)
-    onlyIf { !outputFile.get().asFile.exists() }
 
-    doFirst {
-        outputFile.get().asFile.parentFile.mkdirs()
+    doLast {
+        outputFile.parentFile.mkdirs()
+        if (localDist.exists()) {
+            localDist.copyTo(outputFile, overwrite = true)
+        } else if (!outputFile.exists() || outputFile.length() < 1000) {
+            val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
+            url.openStream().use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
     }
+}
 
-    // NOTE: adapt the exact URL pattern to the file name
-    // that your release assets actually have on GitHub.
-    commandLine(
-        "curl", "-L", "-f",
-        "-o", outputFile.get().asFile.absolutePath,
-        "https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVersion/CPLEX-Plugin-$pluginVersion.zip"
-    )
+tasks.matching { it.name.startsWith("initializeIntellijPlatform") }.configureEach {
+    dependsOn(fetchPlugin)
 }
 
 dependencies {
@@ -43,7 +50,16 @@ dependencies {
         val pluginVer = providers.gradleProperty("pluginVersion").get()
         val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
         val downloadedDist = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
-        localPlugin(if (localDist.exists()) localDist else downloadedDist)
+
+        if (localDist.exists()) {
+            localPlugin(localDist)
+        } else {
+            if (!downloadedDist.exists()) {
+                downloadedDist.parentFile.mkdirs()
+                downloadedDist.createNewFile()
+            }
+            localPlugin(downloadedDist)
+        }
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -57,6 +73,17 @@ dependencies {
 
 tasks.test {
     dependsOn(fetchPlugin)
+
+    val isCi = providers.environmentVariable("CI").isPresent
+    val availableCores = Runtime.getRuntime().availableProcessors()
+    val osBean = ManagementFactory.getOperatingSystemMXBean() as? com.sun.management.OperatingSystemMXBean
+    @Suppress("DEPRECATION")
+    val totalRamBytes = osBean?.totalMemorySize ?: osBean?.totalPhysicalMemorySize ?: 0L
+    val totalRamGb = totalRamBytes / (1024 * 1024 * 1024)
+
+    // Użycie 1 forka zapobiega konfliktom dostępu do bazy VFS (AccessDeniedException na Windowsie) w idea-sandbox
+    maxParallelForks = 1
+    maxHeapSize = if (totalRamGb >= 16) "2g" else "1g"
 
     // Path to examples - the models/ folder at the root of the repo,
     // i.e., one level above the test-harness module.
