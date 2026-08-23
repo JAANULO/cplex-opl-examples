@@ -54,14 +54,10 @@ execute {
 }
 
 main {
-    var start = cplex.getCplexTime();
     thisOplModel.generate();
     if (cp.solve()) {
         thisOplModel.postProcess();
     } else {
         writeln("No feasible Job-Shop schedule found.");
     }
-    var end = cplex.getCplexTime();
-    writeln("--------------------------------");
-    writeln("Solve time (OPL): ", end - start, " seconds");
 }

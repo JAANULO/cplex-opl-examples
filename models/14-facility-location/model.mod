@@ -32,5 +32,5 @@ subject to {
   // Logical constraint (=>)
   forall(s in Stores, w in Warehouses)
     LogicConstraint:
-      (ship[s][w] > 0) => (open[w] == 1);
+      (open[w] == 0) => (ship[s][w] == 0);
 }

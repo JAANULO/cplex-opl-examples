@@ -29,7 +29,7 @@ dvar float+ weight[Assets];
  * Transaction costs (α) are described by a `piecewise` function. 
  * When weight $w$ is small, we pay one rate, when it exceeds the €100k threshold, another.
  */
-piecewise { 10 -> 0.2; 15 -> 0.5; 25 } costPenalty;
+pwlFunction costPenalty = piecewise { 10 -> 0.2; 15 -> 0.5; 25 } (0, 0);
 
 // Objective function (Quadratic Programming)
 minimize 

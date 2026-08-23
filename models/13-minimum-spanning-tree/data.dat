@@ -1,4 +1,4 @@
-// Bardzo mały graf ze względu na powolność powerset
+// Very small graph due to powerset performance limitations
 Nodes = {"1", "2", "3", "4"};
 
 Edges = {

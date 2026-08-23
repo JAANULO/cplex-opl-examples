@@ -36,12 +36,12 @@ execute DISPLAY {
 
 // Flow control (main block)
 main {
-  var source = new OplModelSource("model.mod");
-  var def = new OplModelDefinition(source);
+  var source = new IloOplModelSource("model.mod");
+  var def = new IloOplModelDefinition(source);
   var cplexInstance = new IloCplex();
-  var modelInstance = new OplModel(def, cplexInstance);
+  var modelInstance = new IloOplModel(def, cplexInstance);
   
-  var dataInstance = new OplDataSource("data.dat");
+  var dataInstance = new IloOplDataSource("data.dat");
   modelInstance.addDataSource(dataInstance);
   modelInstance.generate();
   

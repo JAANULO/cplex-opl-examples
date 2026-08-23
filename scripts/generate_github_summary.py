@@ -2,7 +2,12 @@ import json
 import os
 import sys
 
-summary_file = os.environ.get("GITHUB_STEP_SUMMARY", "local_summary.md")
+summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+if not summary_file:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    reports_dir = os.path.join(base_dir, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    summary_file = os.path.join(reports_dir, "local_summary.md")
 try:
     with open(summary_file, "w", encoding="utf-8") as f:
         pass

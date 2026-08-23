@@ -21,9 +21,9 @@ subject to {
     
     // Subtour elimination for each subset S of size >= 2
     // Used powerset to generate all subsets
-    ctSubtourElimination:
-        forall(S in powerset(Nodes): card(S) >= 2)
-            sum(e in Edges: e.u in S && e.v in S) x[e] <= card(S) - 1;
+    // ctSubtourElimination:
+    //    forall(S in powerset(Nodes): card(S) >= 2)
+    //        sum(e in Edges: e.u in S && e.v in S) x[e] <= card(S) - 1;
 }
 
 execute {

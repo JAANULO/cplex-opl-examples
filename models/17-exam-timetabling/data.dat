@@ -1,10 +1,10 @@
 // data.dat
-// Minimalistyczne zbiory krotek dla parsera
+// Minimalist tuples sets for the parser
 
 registrations = {
-    <"Jan", "Matematyka">,
-    <"Jan", "Fizyka">,
-    <"Anna", "Informatyka">,
-    <"Anna", "Fizyka">,
-    <"Piotr", "Matematyka">
+    <"John", "Mathematics">,
+    <"John", "Physics">,
+    <"Anna", "Computer Science">,
+    <"Anna", "Physics">,
+    <"Peter", "Mathematics">
 };
