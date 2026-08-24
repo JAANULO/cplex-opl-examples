@@ -1,0 +1,8 @@
+Tasks = { "A", "B", "C", "D" };
+Duration = [ 3, 2, 4, 1 ];
+Precedences = {
+  <"A", "B">,
+  <"A", "C">,
+  <"B", "D">,
+  <"C", "D">
+};

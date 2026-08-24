@@ -17,19 +17,38 @@ repositories {
     }
 }
 
-// Downloads the built plugin from the latest GitHub Release of the cplex-opl-jetbrains repo.
-val fetchPlugin by tasks.registering {
+val fetchPlugin by tasks.registering(Exec::class) {
+    val isCi = providers.environmentVariable("CI").isPresent
     val pluginVer = providers.gradleProperty("pluginVersion").get()
+    val pluginProjectDir = file("../../cplex-opl-jetbrains")
     val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
     val outputFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
 
     outputs.file(outputFile)
+    outputs.upToDateWhen { false }
 
-    doLast {
-        outputFile.parentFile.mkdirs()
-        if (localDist.exists()) {
-            localDist.copyTo(outputFile, overwrite = true)
-        } else if (!outputFile.exists() || outputFile.length() < 1000) {
+    if (!isCi && pluginProjectDir.exists()) {
+        val osName = System.getProperty("os.name").lowercase()
+        val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
+        
+        workingDir = pluginProjectDir
+        commandLine(gradlewCmd, "buildPlugin")
+        
+        doLast {
+            outputFile.parentFile.mkdirs()
+            if (localDist.exists()) {
+                localDist.copyTo(outputFile, overwrite = true)
+            } else {
+                throw GradleException("Nie znaleziono pliku: ${localDist.absolutePath}")
+            }
+        }
+    } else {
+        val osName = System.getProperty("os.name").lowercase()
+        val echoCmd = if (osName.contains("windows")) listOf("cmd", "/c", "echo", "Downloading from GitHub") else listOf("echo", "Downloading from GitHub")
+        commandLine(echoCmd)
+
+        doLast {
+            outputFile.parentFile.mkdirs()
             val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
             url.openStream().use { input ->
                 outputFile.outputStream().use { output ->
@@ -47,19 +66,13 @@ tasks.matching { it.name.startsWith("initializeIntellijPlatform") }.configureEac
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
-        val pluginVer = providers.gradleProperty("pluginVersion").get()
-        val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
         val downloadedDist = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
 
-        if (localDist.exists()) {
-            localPlugin(localDist)
-        } else {
-            if (!downloadedDist.exists()) {
-                downloadedDist.parentFile.mkdirs()
-                downloadedDist.createNewFile()
-            }
-            localPlugin(downloadedDist)
+        if (!downloadedDist.exists()) {
+            downloadedDist.parentFile.mkdirs()
+            downloadedDist.createNewFile()
         }
+        localPlugin(downloadedDist)
         testFramework(TestFrameworkType.Platform)
     }
 
