@@ -17,62 +17,47 @@ repositories {
     }
 }
 
-val fetchPlugin by tasks.registering(Exec::class) {
-    val isCi = providers.environmentVariable("CI").isPresent
-    val pluginVer = providers.gradleProperty("pluginVersion").get()
-    val pluginProjectDir = file("../../cplex-opl-jetbrains")
-    val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
-    val outputFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
-
-    outputs.file(outputFile)
-    outputs.upToDateWhen { false }
-
-    if (!isCi && pluginProjectDir.exists()) {
-        val osName = System.getProperty("os.name").lowercase()
-        val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
-        
-        workingDir = pluginProjectDir
-        commandLine(gradlewCmd, "buildPlugin")
-        
-        doLast {
-            outputFile.parentFile.mkdirs()
-            if (localDist.exists()) {
-                localDist.copyTo(outputFile, overwrite = true)
-            } else {
-                throw GradleException("Nie znaleziono pliku: ${localDist.absolutePath}")
-            }
-        }
-    } else {
-        val osName = System.getProperty("os.name").lowercase()
-        val echoCmd = if (osName.contains("windows")) listOf("cmd", "/c", "echo", "Downloading from GitHub") else listOf("echo", "Downloading from GitHub")
-        commandLine(echoCmd)
-
-        doLast {
-            outputFile.parentFile.mkdirs()
-            val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
-            url.openStream().use { input ->
-                outputFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-        }
-    }
-}
-
-tasks.matching { it.name.startsWith("initializeIntellijPlatform") }.configureEach {
-    dependsOn(fetchPlugin)
-}
+// fetchPlugin task removed, logic moved to dependencies block
 
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
-        val downloadedDist = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
-
-        if (!downloadedDist.exists()) {
-            downloadedDist.parentFile.mkdirs()
-            downloadedDist.createNewFile()
+        
+        val isCi = providers.environmentVariable("CI").isPresent
+        val pluginVer = providers.gradleProperty("pluginVersion").get()
+        val pluginFile = if (isCi) {
+            val downloadedFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
+            if (!downloadedFile.exists()) {
+                downloadedFile.parentFile.mkdirs()
+                println("Downloading plugin from GitHub for CI...")
+                val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
+                url.openStream().use { input ->
+                    downloadedFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+            downloadedFile
+        } else {
+            val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
+            if (!localDist.exists()) {
+                println("Building plugin locally...")
+                val pluginProjectDir = file("../../cplex-opl-jetbrains")
+                val osName = System.getProperty("os.name").lowercase()
+                val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
+                val pb = ProcessBuilder(gradlewCmd, "buildPlugin")
+                pb.directory(pluginProjectDir)
+                pb.inheritIO()
+                val process = pb.start()
+                val exitCode = process.waitFor()
+                if (exitCode != 0) {
+                    throw GradleException("Failed to run buildPlugin, exit code $exitCode")
+                }
+            }
+            localDist
         }
-        localPlugin(downloadedDist)
+        
+        localPlugin(pluginFile)
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -85,8 +70,6 @@ dependencies {
 }
 
 tasks.test {
-    dependsOn(fetchPlugin)
-
     val isCi = providers.environmentVariable("CI").isPresent
     val availableCores = Runtime.getRuntime().availableProcessors()
     val osBean = ManagementFactory.getOperatingSystemMXBean() as? com.sun.management.OperatingSystemMXBean
