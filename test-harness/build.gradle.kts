@@ -27,7 +27,7 @@ dependencies {
         val pluginVer = providers.gradleProperty("pluginVersion").get()
         val pluginFile = if (isCi) {
             val downloadedFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
-            if (!downloadedFile.exists()) {
+            if (!downloadedFile.exists() || downloadedFile.length() < 1024) {
                 downloadedFile.parentFile.mkdirs()
                 println("Downloading plugin from GitHub for CI...")
                 val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
