@@ -102,11 +102,6 @@ jobs:
             echo "platformVersion=${PLATFORM}" >> gradle.properties
           fi
 
-      - name: Download Plugin
-        if: github.event.action != 'run_dev_regression'
-        run: |
-          chmod +x gradlew
-          ./gradlew :test-harness:fetchPlugin --stacktrace
 
       - name: Run regression tests
         run: |

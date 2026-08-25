@@ -23,38 +23,47 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         
-        val isCi = providers.environmentVariable("CI").isPresent
         val pluginVer = providers.gradleProperty("pluginVersion").get()
-        val pluginFile = if (isCi) {
+        val pluginFile = run {
+            val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
+            if (localDist.exists()) {
+                println("Using locally built plugin at: $localDist")
+                return@run localDist
+            }
+
             val downloadedFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
             if (!downloadedFile.exists() || downloadedFile.length() < 1024) {
                 downloadedFile.parentFile.mkdirs()
-                println("Downloading plugin from GitHub for CI...")
-                val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
-                url.openStream().use { input ->
-                    downloadedFile.outputStream().use { output ->
-                        input.copyTo(output)
+                println("Downloading plugin from GitHub ($pluginVer)...")
+                try {
+                    val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
+                    url.openStream().use { input ->
+                        downloadedFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
                     }
+                } catch (e: java.io.FileNotFoundException) {
+                    val pluginProjectDir = file("../../cplex-opl-jetbrains")
+                    if (pluginProjectDir.exists()) {
+                        println("Release not found. Building plugin locally...")
+                        val osName = System.getProperty("os.name").lowercase()
+                        val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
+                        val pb = ProcessBuilder(gradlewCmd, "buildPlugin")
+                        pb.directory(pluginProjectDir)
+                        pb.inheritIO()
+                        val process = pb.start()
+                        val exitCode = process.waitFor()
+                        if (exitCode != 0) {
+                            throw GradleException("Failed to run buildPlugin, exit code $exitCode")
+                        }
+                        if (localDist.exists()) {
+                            return@run localDist
+                        }
+                    }
+                    throw GradleException("Plugin release $pluginVer not found on GitHub, and local source not available.", e)
                 }
             }
             downloadedFile
-        } else {
-            val localDist = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
-            if (!localDist.exists()) {
-                println("Building plugin locally...")
-                val pluginProjectDir = file("../../cplex-opl-jetbrains")
-                val osName = System.getProperty("os.name").lowercase()
-                val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
-                val pb = ProcessBuilder(gradlewCmd, "buildPlugin")
-                pb.directory(pluginProjectDir)
-                pb.inheritIO()
-                val process = pb.start()
-                val exitCode = process.waitFor()
-                if (exitCode != 0) {
-                    throw GradleException("Failed to run buildPlugin, exit code $exitCode")
-                }
-            }
-            localDist
         }
         
         localPlugin(pluginFile)
