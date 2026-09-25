@@ -68,6 +68,10 @@ class PluginRegressionTest(private val testFile: File) {
     @Test
     fun checkDiagnostics() {
         val relativePath = testFile.relativeTo(modelsDir).path
+        val parentDir = testFile.parentFile
+        if (parentDir != null && parentDir.exists()) {
+            myFixture.copyDirectoryToProject(parentDir.relativeTo(modelsDir).path, parentDir.relativeTo(modelsDir).path)
+        }
         myFixture.configureByFile(relativePath)
 
         val (highlights, duration) = measureTimedValue {
@@ -145,3 +149,4 @@ class PluginRegressionTest(private val testFile: File) {
         }
     }
 }
+
