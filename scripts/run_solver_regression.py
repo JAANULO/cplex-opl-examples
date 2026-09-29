@@ -165,6 +165,8 @@ def main():
         model_dirs.append(target)
     else:
         for d in os.listdir(models_dir):
+            if d.startswith('.'):
+                continue
             path = os.path.join(models_dir, d)
             if os.path.isdir(path):
                 model_dirs.append(path)
