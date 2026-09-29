@@ -67,10 +67,10 @@ class PluginRegressionTest(private val testFile: File) {
 
     @Test
     fun checkDiagnostics() {
-        val relativePath = testFile.relativeTo(modelsDir).path
+        val relativePath = testFile.relativeTo(modelsDir).path.replace("\\", "/")
         val parentDir = testFile.parentFile
         if (parentDir != null && parentDir.exists()) {
-            myFixture.copyDirectoryToProject(parentDir.relativeTo(modelsDir).path, parentDir.relativeTo(modelsDir).path)
+            myFixture.copyDirectoryToProject(parentDir.relativeTo(modelsDir).path.replace("\\", "/"), parentDir.relativeTo(modelsDir).path.replace("\\", "/"))
         }
         myFixture.configureByFile(relativePath)
 

@@ -58,7 +58,7 @@ class CompletionRegressionTest(private val testFile: File) {
 
     @Test
     fun testCompletion() {
-        val relativePath = testFile.relativeTo(completionDir).path
+        val relativePath = testFile.relativeTo(completionDir).path.replace("\\", "/")
         var passed = true
         var errorMessage: String? = null
 
