@@ -120,8 +120,19 @@ class CompletionRegressionTest(private val testFile: File) {
 
         private val completionDir: File
             get() {
-                val baseDir = System.getProperty("user.dir")
-                return File(baseDir, "testData/completion")
+                val prop = System.getProperty("completionTestData.dir")
+                if (prop != null) {
+                    val f = File(prop)
+                    if (f.exists()) return f
+                }
+                val candidates = listOf(
+                    File("testData/completion"),
+                    File("test-harness/testData/completion"),
+                    File("../test-harness/testData/completion"),
+                    File(System.getProperty("user.dir"), "testData/completion"),
+                    File(System.getProperty("user.dir"), "test-harness/testData/completion")
+                )
+                return candidates.firstOrNull { it.exists() } ?: File("testData/completion")
             }
 
         @JvmStatic
@@ -139,7 +150,8 @@ class CompletionRegressionTest(private val testFile: File) {
                 results = allResults
             )
 
-            val outputPath = "build/test-results/completion-report.json"
+            val outputPath = System.getProperty("completionReport.output")
+                ?: "build/test-results/completion-report.json"
             val outputFile = File(outputPath)
             outputFile.parentFile?.mkdirs()
 

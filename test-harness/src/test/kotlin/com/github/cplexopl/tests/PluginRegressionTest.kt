@@ -15,9 +15,8 @@ import java.io.File
 import kotlin.time.measureTimedValue
 
 /**
-* Test result for a single .mod/.dat file.
-* Change the fields here if you want a different JSON structure.
-*/
+ * Test result for a single .mod/.dat file.
+ */
 data class FileTestResult(
     val fileName: String,
     val relativePath: String,
@@ -35,17 +34,10 @@ data class RegressionReport(
 )
 
 /**
-* Plugin test harness: for each .mod file in models/
-* runs the plugin engine highlighting (headless, without opening an IDE window)
-* and collects the number of errors/warnings into a single JSON report.
-* IMPORTANT - this is just a skeleton for now:
-* * the assertion at the end is very simple (files with "broken" in the name
-* should have >0 errors). Adjust this to the actual naming convention
-* of your examples in models/.
-* * if you want to compare against an exact, expected number of errors per file,
-
-* add *.expected.json files next to the models and load them here for comparison.
-*/
+ * Plugin test harness: for each .mod file in models/
+ * runs the plugin engine highlighting (headless, without opening an IDE window)
+ * and collects the number of errors/warnings into a single JSON report.
+ */
 @RunWith(Parameterized::class)
 class PluginRegressionTest(private val testFile: File) {
 
@@ -105,7 +97,21 @@ class PluginRegressionTest(private val testFile: File) {
 
     companion object {
         private val modelsDir: File
-            get() = File(System.getProperty("testData.dir") ?: "models")
+            get() {
+                val prop = System.getProperty("testData.dir")
+                if (prop != null) {
+                    val f = File(prop)
+                    if (f.exists()) return f
+                }
+                val candidates = listOf(
+                    File("models"),
+                    File("../models"),
+                    File("../../models"),
+                    File(System.getProperty("user.dir"), "models"),
+                    File(System.getProperty("user.dir"), "../models")
+                )
+                return candidates.firstOrNull { it.exists() } ?: File("models")
+            }
 
         private val allResults = mutableListOf<FileTestResult>()
         private val resultsLock = Any()
@@ -149,4 +155,3 @@ class PluginRegressionTest(private val testFile: File) {
         }
     }
 }
-
