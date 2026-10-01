@@ -1,5 +1,6 @@
 import java.lang.management.ManagementFactory
 import java.net.URI
+import java.util.Properties
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
@@ -17,18 +18,28 @@ repositories {
     }
 }
 
+val siblingRepo1 = file("../../cplex-opl-jetbrains")
+val siblingRepo2 = file("../cplex-opl-jetbrains")
+val pluginRepoDir = when {
+    siblingRepo1.exists() -> siblingRepo1
+    siblingRepo2.exists() -> siblingRepo2
+    else -> null
+}
+
+val effectivePluginVersion = run {
+    val siblingPropsFile = pluginRepoDir?.resolve("gradle.properties")
+    val localRepoVersion = if (siblingPropsFile?.exists() == true) {
+        val props = Properties()
+        siblingPropsFile.inputStream().use { stream -> props.load(stream) }
+        props.getProperty("pluginVersion")
+    } else null
+
+    localRepoVersion ?: providers.gradleProperty("pluginVersion").orNull ?: "1.4.9.7"
+}
+
 val preparePluginArtifact by tasks.registering {
     group = "verification"
     description = "Ensures the plugin .zip artifact is ready before running tests (builds locally if repo exists, otherwise downloads from GitHub)"
-
-    val pluginVer = providers.gradleProperty("pluginVersion").get()
-    val siblingRepo1 = file("../../cplex-opl-jetbrains")
-    val siblingRepo2 = file("../cplex-opl-jetbrains")
-    val pluginRepoDir = when {
-        siblingRepo1.exists() -> siblingRepo1
-        siblingRepo2.exists() -> siblingRepo2
-        else -> null
-    }
 
     doLast {
         if (project.hasProperty("pluginZipPath")) {
@@ -41,7 +52,7 @@ val preparePluginArtifact by tasks.registering {
         }
 
         if (pluginRepoDir != null) {
-            println("Checking and building local plugin in: ${pluginRepoDir.absolutePath}")
+            println("Checking and building local plugin in: ${pluginRepoDir.absolutePath} (detected version: $effectivePluginVersion)")
             val osName = System.getProperty("os.name").lowercase()
             val gradlewCmd = if (osName.contains("windows")) "gradlew.bat" else "./gradlew"
             val pb = ProcessBuilder(gradlewCmd, "buildPlugin")
@@ -58,8 +69,8 @@ val preparePluginArtifact by tasks.registering {
         val downloadedFile = layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
         if (!downloadedFile.exists() || downloadedFile.length() < 1024) {
             downloadedFile.parentFile.mkdirs()
-            println("Downloading plugin release v$pluginVer from GitHub...")
-            val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$pluginVer/CPLEX-Plugin-$pluginVer.zip").toURL()
+            println("Downloading plugin release v$effectivePluginVersion from GitHub...")
+            val url = URI.create("https://github.com/JAANULO/cplex-opl-jetbrains/releases/download/$effectivePluginVersion/CPLEX-Plugin-$effectivePluginVersion.zip").toURL()
             url.openStream().use { input ->
                 downloadedFile.outputStream().use { output ->
                     input.copyTo(output)
@@ -74,19 +85,21 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         
-        val pluginVer = providers.gradleProperty("pluginVersion").get()
         val pluginFile = run {
             val customProp = findProperty("pluginZipPath") as? String
             if (!customProp.isNullOrBlank()) {
                 return@run file(customProp)
             }
-            val localDist1 = file("../../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
-            if (localDist1.exists()) {
-                return@run localDist1
-            }
-            val localDist2 = file("../cplex-opl-jetbrains/build/distributions/CPLEX-Plugin-$pluginVer.zip")
-            if (localDist2.exists()) {
-                return@run localDist2
+            if (pluginRepoDir != null) {
+                val distDir = pluginRepoDir.resolve("build/distributions")
+                val exactDist = distDir.resolve("CPLEX-Plugin-$effectivePluginVersion.zip")
+                if (exactDist.exists()) {
+                    return@run exactDist
+                }
+                val anyDist = distDir.listFiles()?.firstOrNull { it.isFile && it.extension == "zip" && it.name.startsWith("CPLEX-Plugin-") }
+                if (anyDist != null && anyDist.exists()) {
+                    return@run anyDist
+                }
             }
             layout.buildDirectory.file("downloaded/cplex-opl-jetbrains.zip").get().asFile
         }
@@ -132,8 +145,7 @@ tasks.test {
         layout.buildDirectory.file("test-results/completion-report.json").get().asFile.absolutePath
     )
 
-    val pluginVersion = providers.gradleProperty("pluginVersion").get()
-    systemProperty("plugin.version.under.test", pluginVersion)
+    systemProperty("plugin.version.under.test", effectivePluginVersion)
 
     useJUnit()
     testLogging {
