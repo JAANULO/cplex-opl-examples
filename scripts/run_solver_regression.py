@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import subprocess
 import concurrent.futures
 import time
@@ -176,8 +177,6 @@ def main():
     results = []
     
     # Przetwarzanie równoległe
-    # Używamy ThreadPoolExecutor zamiast ProcessPoolExecutor dla łatwiejszego logowania stdout,
-    # Ponieważ samo `subprocess.run` i tak ucieka poza GIL i tworzy proces.
     workers = min(32, os.cpu_count() + 4) if os.cpu_count() else 4
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(run_model, d, temp_ops, args.timeout, args.verbose): d for d in model_dirs}
@@ -207,26 +206,62 @@ def main():
     # Sortowanie wyników
     results.sort(key=lambda x: x['name'])
     
-    # Save to reports/solver_report.md
-    reports_dir = os.path.join(base_dir, "reports")
-    os.makedirs(reports_dir, exist_ok=True)
-    report_path = os.path.join(reports_dir, "solver_report.md")
-    
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write("# Solver Test Execution Report\n\n")
-        f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write("| Model | Status | Time (s) | Warnings | Notes |\n")
-        f.write("|---|---|---|---|---|\n")
-        for r in results:
-            err = r['error'] if r['error'] else "-"
-            f.write(f"| {r['name']} | {r['status']} | {r['time']:.2f} | {r['warnings']} | {err} |\n")
-            
-    # Końcowe podsumowanie
+    # Obliczanie metryk
     successes = sum(1 for r in results if r['status'] in ["SUCCESS", "INFEASIBLE"])
     errors = sum(1 for r in results if r['status'] in ["ERROR", "TIMEOUT"])
     skipped = sum(1 for r in results if r['status'] == "SKIPPED")
     total_time = sum(r['time'] for r in results)
     
+    now = datetime.now()
+    timestamp_str = now.strftime('%Y-%m-%d %H:%M:%S')
+    file_timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
+    
+    reports_dir = os.path.join(base_dir, "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    
+    # 1. Zapis ujednoliconego JSON
+    json_path = os.path.join(reports_dir, f"solver-report-{file_timestamp}.json")
+    json_data = {
+        "timestamp": f"{timestamp_str} (Europe/Warsaw)",
+        "category": "solver",
+        "total": len(model_dirs),
+        "passed": successes,
+        "failed": errors,
+        "skipped": skipped,
+        "durationMs": int(total_time * 1000),
+        "items": results
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(json_data, f, indent=2)
+        
+    # 2. Zapis prezentacyjnego Markdown
+    md_path = os.path.join(reports_dir, f"solver-report-{file_timestamp}.md")
+    status_icon = "✅" if errors == 0 else "❌"
+    
+    md_lines = []
+    md_lines.append(f"### {status_icon} CPLEX Solver Regression Report")
+    md_lines.append(f"**Timestamp:** {timestamp_str} | **Total:** {len(model_dirs)} | **Passed:** {successes} | **Failed:** {errors} | **Skipped:** {skipped} | **Total time:** {total_time:.2f}s\n")
+    md_lines.append("| Model | Status | Time (s) | Warnings | Notes |")
+    md_lines.append("|---|---|---|---|---|")
+    for r in results:
+        err = r['error'] if r['error'] else "-"
+        icon = "✅" if r['status'] == "SUCCESS" else ("⚠️" if r['status'] == "INFEASIBLE" else ("⏸️" if r['status'] == "SKIPPED" else "❌"))
+        md_lines.append(f"| `{r['name']}` | {icon} {r['status']} | {r['time']:.2f} | {r['warnings']} | {err} |")
+        
+    md_content = "\n".join(md_lines) + "\n"
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+        
+    # 3. Zapis do GitHub Step Summary jeśli środowisko CI
+    summary_env = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_env:
+        try:
+            with open(summary_env, "a", encoding="utf-8") as f:
+                f.write(md_content)
+        except Exception as e:
+            print(f"Warning: Could not write to GITHUB_STEP_SUMMARY: {e}", file=sys.stderr)
+            
+    # Końcowe podsumowanie w konsoli
     print("\n" + "="*50)
     summary_msg = f"Tested {len(model_dirs)} models: {successes} Successes, {errors} Errors, {skipped} Skipped. Total time: {total_time:.2f}s"
     if errors > 0:
@@ -235,6 +270,8 @@ def main():
         print_color(summary_msg, Colors.GREEN)
     else:
         print(summary_msg)
+        
+    print(f"Reports saved to:\n  - {md_path}\n  - {json_path}")
         
     if errors > 0:
         sys.exit(1)
